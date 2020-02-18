@@ -949,6 +949,7 @@ calculateSRMR <- function(
 
 calculatef2 <- function(.object = NULL) {
   
+  if(inherits(.object, "cSEMResults_default")) {
   ## Get relevant quantities
   approach_nl      <- .object$Information$Arguments$.approach_nl
   approach_paths   <- .object$Information$Arguments$.approach_paths
@@ -960,7 +961,21 @@ calculatef2 <- function(.object = NULL) {
   Q         <- sqrt(.object$Estimates$Reliabilities)
   
   s <- csem_model$structural
-  
+  } else if(inherits(.object, "cSEMResults_2ndorder")) {
+    approach_nl      <- .object$Second_stage$Information$Arguments$.approach_nl
+    approach_paths   <- .object$Second_stage$Information$Arguments$.approach_paths
+    approach_weights <- .object$Second_stage$Information$Arguments$.approach_weights
+    csem_model       <- .object$Second_stage$Information$Model
+    H         <- .object$Second_stage$Estimates$Construct_scores
+    normality <- .object$Second_stage$Information$Arguments$.normality
+    P         <- .object$Second_stage$Estimates$Construct_VCV
+    Q         <- sqrt(.object$Second_stage$Estimates$Reliabilities)
+    
+    s <- csem_model$structural
+     
+  } else {
+    stop2("The provided cSEM class is not supported.")
+  }
   vars_endo <- rownames(s)[rowSums(s) != 0]
   
   ## Loop over each structural equation
@@ -995,8 +1010,13 @@ calculatef2 <- function(.object = NULL) {
         r2_excluded <- 0
       }
       names(r2_excluded) <- x
+      # Obtain the R^2 included
+      if(inherits(.object, "cSEMResults_default")) {
       r2_included <- .object$Estimates$R2[x]
-      
+      }
+      if(inherits(.object, "cSEMResults_2ndorder")) {
+        r2_included <- .object$Second_stage$Estimates$R2[x]
+        }
       effect_size <- unname((r2_included - r2_excluded)/(1 - r2_included))
     })
     inner_out <- unlist(inner_out)
